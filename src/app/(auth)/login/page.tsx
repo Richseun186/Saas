@@ -2,7 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import { loginAction } from "@/actions/auth";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 function SubmitButton() {
@@ -19,7 +19,7 @@ function SubmitButton() {
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const [error, setError] = useState<string | undefined>("");
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -86,5 +86,17 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
