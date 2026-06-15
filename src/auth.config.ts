@@ -50,7 +50,7 @@ export default {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role; // Extract from DB user
+        token.role = (user as any).role; // Extract from DB user
       }
       return token;
     },
