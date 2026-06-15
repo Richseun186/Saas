@@ -1,0 +1,18 @@
+# ============================================================================
+# Netlify Deployment Configuration for GradeSync Nigeria
+# ============================================================================
+# This file configures the build and deployment settings for Netlify.
+# Next.js is automatically detected by Netlify's @netlify/plugin-nextjs.
+# ============================================================================
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Environment variables should be set in the Netlify Dashboard UI,
+# NOT in this file, for security (DATABASE_URL, CLERK keys, etc.)
+
+# Serverless function timeout — the default is 10 seconds.
+# Our computation engine is pure & synchronous, so this is well within limits.
+[functions]
+  node_bundler = "esbuild"

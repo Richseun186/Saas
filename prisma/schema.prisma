@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// USER & ROLE MANAGEMENT
+// -----------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  FORM_MASTER
+  STUDENT
+}
+
+model User {
+  id        String   @id @default(uuid()) // Can map to Clerk User ID
+  email     String   @unique
+  name      String
+  role      Role     @default(STUDENT)
+  schoolId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  school      School?      @relation(fields: [schoolId], references: [id])
+  enrollments Enrollment[] // If user is a student
+  classes     Class[]      // If user is a form master
+}
+
+// -----------------------------------------------------------------------------
+// SCHOOL SETUP
+// -----------------------------------------------------------------------------
+
+model School {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  users          User[]
+  classes        Class[]
+  sessionsTerms  SessionTerm[]
+  schoolSubjects SchoolSubject[]
+}
+
+model SessionTerm {
+  id        String   @id @default(uuid())
+  name      String   // e.g., "2025/2026 First Term"
+  schoolId  String
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean  @default(false)
+
+  // Relationships
+  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+}
+
+model Class {
+  id           String   @id @default(uuid())
+  name         String   // e.g., "JSS1", "SS2 Science"
+  schoolId     String
+  formMasterId String?  // Optional relation to User (Form Master)
+
+  // Relationships
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  formMaster   User?        @relation(fields: [formMasterId], references: [id])
+  enrollments  Enrollment[]
+}
+
+// -----------------------------------------------------------------------------
+// SUBJECTS & CURRICULUM
+// -----------------------------------------------------------------------------
+
+model SubjectBank {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g., "Mathematics", "Basic Science"
+  category    String   // e.g., "Core", "Junior Secondary", "Senior Science", "Senior Arts/Commercial"
+  description String?
+
+  // Relationships
+  schoolSubjects SchoolSubject[]
+}
+
+model SchoolSubject {
+  id            String   @id @default(uuid())
+  schoolId      String
+  subjectBankId String
+  customName    String?  // Allows a school to override the standard name if necessary
+
+  // Relationships
+  school      School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectBank SubjectBank   @relation(fields: [subjectBankId], references: [id])
+  results     Result[]
+
+  @@unique([schoolId, subjectBankId]) // A school can only map a subject from the bank once
+}
+
+// -----------------------------------------------------------------------------
+// ENROLLMENT & RESULTS
+// -----------------------------------------------------------------------------
+
+model Enrollment {
+  id            String   @id @default(uuid())
+  studentId     String
+  classId       String
+  sessionTermId String
+
+  // Generated AI Remarks
+  formMasterRemark String? @db.Text
+  principalRemark  String? @db.Text
+
+  // Relationships
+  student     User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class       Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  sessionTerm SessionTerm @relation(fields: [sessionTermId], references: [id], onDelete: Cascade)
+  results     Result[]
+
+  @@unique([studentId, sessionTermId]) // A student is enrolled once per term
+}
+
+model Result {
+  id              String   @id @default(uuid())
+  enrollmentId    String
+  schoolSubjectId String
+  
+  // Scores
+  ca1   Float? @default(0) // Usually out of 20 or 15
+  ca2   Float? @default(0) // Usually out of 20 or 15
+  exam  Float? @default(0) // Usually out of 60 or 70
+  total Float? @default(0) // Total out of 100
+
+  // Computed fields (often computed on the fly or stored for performance)
+  grade  String? // e.g., "A1", "B2"
+  remark String? // e.g., "Excellent", "Good"
+
+  // Relationships
+  enrollment    Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  schoolSubject SchoolSubject @relation(fields: [schoolSubjectId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, schoolSubjectId]) // One result per subject per student per term
+}
