@@ -38,13 +38,14 @@ export async function getStudentReportCard(studentId: string) {
   // Calculate totals and format results for the ReportCard component
   let termTotalScore = 0;
   const resultsData = enrollment.results.map(r => {
-    termTotalScore += r.total;
+    const total = r.total || 0;
+    termTotalScore += total;
     return {
       subject: r.schoolSubject.subjectBank.name,
-      ca1: r.ca1,
-      ca2: r.ca2,
-      exam: r.exam,
-      total: r.total,
+      ca1: r.ca1 || 0,
+      ca2: r.ca2 || 0,
+      exam: r.exam || 0,
+      total: total,
       grade: r.grade || "-",
       remark: r.remark || "-"
     };
