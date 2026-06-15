@@ -28,14 +28,14 @@ import { Save, BookOpen, Users, BarChart3 } from "lucide-react";
 
 /** Shape of each student passed in from the parent */
 interface Student {
-  id: string;
+  id: string; // This is now enrollmentId
   name: string;
   admissionNo: string;
 }
 
 /** Shape of a single score entry (input / output) */
 interface ScoreEntry {
-  studentId: string;
+  enrollmentId: string;
   ca1: number;
   ca2: number;
   exam: number;
@@ -58,6 +58,8 @@ export interface BroadsheetProps {
   initialScores?: ScoreEntry[];
   /** Callback fired when the teacher clicks "Save Scores" */
   onSave?: (scores: ComputedScoreEntry[]) => void;
+  /** Flag for saving state */
+  isSaving?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -91,7 +93,7 @@ const GRADE_COLORS: Record<string, string> = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Converts the `initialScores` array into a Record keyed by studentId.
+ * Converts the `initialScores` array into a Record keyed by studentId (which is enrollmentId).
  * Students without initial scores default to 0/0/0.
  */
 function buildInitialScoresMap(
@@ -108,8 +110,8 @@ function buildInitialScoresMap(
   // Overlay any pre-existing scores
   if (initialScores) {
     for (const score of initialScores) {
-      if (map[score.studentId]) {
-        map[score.studentId] = {
+      if (map[score.enrollmentId]) {
+        map[score.enrollmentId] = {
           ca1: score.ca1,
           ca2: score.ca2,
           exam: score.exam,
@@ -130,8 +132,9 @@ export default function Broadsheet({
   students,
   initialScores,
   onSave,
+  isSaving,
 }: BroadsheetProps) {
-  // ── State: scores map keyed by studentId ──────────────────────────────────
+  // ── State: scores map keyed by studentId (enrollmentId) ──────────────────────────────────
   const [scores, setScores] = useState<
     Record<string, { ca1: number; ca2: number; exam: number }>
   >(() => buildInitialScoresMap(students, initialScores));
@@ -189,7 +192,7 @@ export default function Broadsheet({
     if (!onSave) return;
 
     const payload: ComputedScoreEntry[] = computedRows.map((row) => ({
-      studentId: row.id,
+      enrollmentId: row.id,
       ca1: row.ca1,
       ca2: row.ca2,
       exam: row.exam,
@@ -400,6 +403,7 @@ export default function Broadsheet({
         <button
           type="button"
           onClick={handleSave}
+          disabled={isSaving}
           className={cn(
             "inline-flex items-center gap-2 rounded-lg px-5 py-2.5",
             "bg-primary text-primary-foreground font-medium text-sm",
@@ -411,7 +415,7 @@ export default function Broadsheet({
           )}
         >
           <Save className="h-4 w-4" />
-          Save Scores
+          {isSaving ? "Saving..." : "Save Scores"}
         </button>
       </div>
     </div>
