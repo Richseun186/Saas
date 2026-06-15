@@ -36,10 +36,10 @@ const MOCK_STUDENTS = [
 
 /** Pre-filled scores for the Broadsheet demo (first 4 students) */
 const MOCK_INITIAL_SCORES = [
-  { studentId: "stu-001", ca1: 18, ca2: 17, exam: 52 },
-  { studentId: "stu-002", ca1: 15, ca2: 19, exam: 48 },
-  { studentId: "stu-003", ca1: 12, ca2: 14, exam: 38 },
-  { studentId: "stu-004", ca1: 20, ca2: 18, exam: 55 },
+  { enrollmentId: "stu-001", ca1: 18, ca2: 17, exam: 52 },
+  { enrollmentId: "stu-002", ca1: 15, ca2: 19, exam: 48 },
+  { enrollmentId: "stu-003", ca1: 12, ca2: 14, exam: 38 },
+  { enrollmentId: "stu-004", ca1: 20, ca2: 18, exam: 55 },
 ];
 
 // ---------------------------------------------------------------------------
