@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { GraduationCap } from "lucide-react";
+
 /**
  * ============================================================================
  *  Demo Page — GradeSync Nigeria Phase 2 Component Showcase
@@ -122,7 +125,23 @@ const adebayoRanked = classPositionDemo.find((s) => s.studentId === "stu-001");
 
 export default function DemoPage() {
   return (
-    <div className="container py-8 space-y-12 animate-fade-in">
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/60 backdrop-blur-xl">
+        <div className="container flex h-16 items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-lg bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">GradeSync Nigeria</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="text-sm text-muted-foreground hover:text-white transition-colors">Sign In</Link>
+            <Link href="/register" className="px-4 py-2 rounded-full bg-teal-500 text-white text-sm font-semibold hover:bg-teal-400 transition-colors">Register School</Link>
+          </div>
+        </div>
+      </header>
+      <div className="container py-8 space-y-12 animate-fade-in flex-1">
       {/* Page Title */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-teal-700 to-emerald-600 bg-clip-text text-transparent">
@@ -255,6 +274,7 @@ export default function DemoPage() {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }
