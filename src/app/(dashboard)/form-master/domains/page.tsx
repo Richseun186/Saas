@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getFormMasterClasses, getActiveTerm } from "@/actions/grading";
-import { getClassStudentsWithDomains, AFFECTIVE_TRAITS, PSYCHOMOTOR_TRAITS, SCORE_LABELS, saveAffectiveDomain, savePsychomotorDomain } from "@/actions/domains";
+import { getClassStudentsWithDomains, saveAffectiveDomain, savePsychomotorDomain } from "@/actions/domains";
+import { AFFECTIVE_TRAITS, PSYCHOMOTOR_TRAITS, SCORE_LABELS } from "@/lib/constants";
 import { Brain, Activity } from "lucide-react";
 
 export default async function DomainsPage() {
