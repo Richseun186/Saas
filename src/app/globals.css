@@ -9,59 +9,45 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   Design Tokens — Light & Dark Mode
+   Design Tokens — Premium Dark Mode
    ========================================================================== */
 
-:root {
-  /* ---------- Brand Colors (Nigerian Green + Gold accent) ---------- */
-  --brand-green: 152 68% 34%;
-  --brand-green-light: 152 55% 45%;
-  --brand-gold: 43 96% 56%;
-  --brand-gold-light: 43 90% 70%;
+:root, .dark {
+  /* ---------- Premium Brand Colors ---------- */
+  --brand-green: 160 84% 39%; /* Vibrant Emerald */
+  --brand-green-light: 160 84% 49%;
+  --brand-gold: 43 100% 60%;
+  --brand-gold-light: 43 100% 75%;
 
-  /* ---------- Shadcn UI Tokens (Light) ---------- */
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 152 68% 34%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 43 96% 56%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 152 68% 34%;
-  --radius: 0.5rem;
-}
-
-.dark {
-  --background: 222.2 84% 4.9%;
+  /* ---------- Deep Sleek Dark Mode ---------- */
+  --background: 230 25% 6%; /* Deep space blue/slate */
   --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
+  
+  --card: 230 25% 8%; /* Slightly lighter than background */
   --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
+  
+  --popover: 230 25% 10%;
   --popover-foreground: 210 40% 98%;
-  --primary: 152 55% 45%;
+  
+  --primary: 160 84% 39%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 217.2 32.6% 17.5%;
+  
+  --secondary: 230 25% 15%;
   --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
+  
+  --muted: 230 25% 15%;
   --muted-foreground: 215 20.2% 65.1%;
-  --accent: 43 90% 70%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 152 55% 45%;
+  
+  --accent: 230 25% 15%;
+  --accent-foreground: 210 40% 98%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --border: 230 25% 15%;
+  --input: 230 25% 15%;
+  --ring: 160 84% 39%;
+  --radius: 0.75rem;
 }
 
 /* ==========================================================================
@@ -76,23 +62,52 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(20, 184, 166, 0.05), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05), transparent 25%);
+    background-attachment: fixed;
   }
 }
 
 /* ==========================================================================
-   Utility Layer — Custom Animations
+   Utility Layer — Premium Animations
    ========================================================================== */
 
 @layer utilities {
-  /* Smooth fade-in for page transitions */
+  /* Smooth entrance */
   .animate-fade-in {
-    animation: fadeIn 0.4s ease-out;
+    animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Upward drift entrance */
+  .animate-slide-up {
+    opacity: 0;
+    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Continuous slow floating */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-float-delayed {
+    animation: float 6s ease-in-out 3s infinite;
+  }
+
+  /* Slow subtle pulse */
+  .animate-glow-pulse {
+    animation: glowPulse 4s ease-in-out infinite;
   }
 
   @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(30px);
     }
     to {
       opacity: 1;
@@ -100,56 +115,85 @@
     }
   }
 
-  /* Subtle scale on hover for interactive cards */
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
+  }
+
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 20px rgba(20, 184, 166, 0.2); }
+    50% { box-shadow: 0 0 40px rgba(20, 184, 166, 0.6); }
+    100% { box-shadow: 0 0 20px rgba(20, 184, 166, 0.2); }
+  }
+
+  /* Shimmer text effect */
+  .animate-shimmer {
+    background-size: 200% auto;
+    animation: shimmer 4s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 0% center; }
+    50% { background-position: 100% center; }
+    100% { background-position: 0% center; }
+  }
+
+  /* Floating particles */
+  @keyframes particleFloat {
+    0%   { opacity: 0; transform: translateY(0px) scale(1); }
+    10%  { opacity: 0.8; }
+    50%  { opacity: 0.4; transform: translateY(-60px) scale(1.2); }
+    90%  { opacity: 0.8; }
+    100% { opacity: 0; transform: translateY(-120px) scale(0.8); }
+  }
+
+  /* Micro-interactions */
   .hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px -10px rgba(20, 184, 166, 0.2);
+    border-color: rgba(20, 184, 166, 0.4);
   }
 
-  /* Glassmorphism utility */
-  .glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+  /* Glowing text */
+  .text-glow {
+    text-shadow: 0 0 20px rgba(20, 184, 166, 0.5);
   }
 
-  /* Container utility */
+  /* Premium Glassmorphism */
+  .glass-card {
+    background: rgba(20, 25, 40, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Container */
   .container {
     width: 100%;
     margin-inline: auto;
-    padding-inline: 1rem;
+    padding-inline: 1.5rem;
   }
 
   @media (min-width: 1400px) {
-    .container {
-      max-width: 1400px;
-    }
+    .container { max-width: 1400px; }
   }
 }
 
 /* ==========================================================================
-   Print Styles — Used by Report Card
+   Print Styles
    ========================================================================== */
-
 @media print {
-  /* Hide navigation, footers, and non-essential UI when printing */
-  header,
-  footer,
-  .no-print {
-    display: none !important;
-  }
-
-  /* Reset backgrounds for clean printing */
+  header, footer, .no-print { display: none !important; }
   body {
     background: white !important;
     color: black !important;
+    background-image: none !important;
   }
-
-  /* Remove shadows and decorative borders */
   .print-clean {
     box-shadow: none !important;
     border: 1px solid #ccc !important;

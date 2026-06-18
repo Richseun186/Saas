@@ -15,16 +15,21 @@ export default async function UserNav() {
     );
   }
 
-  // Determine dashboard link based on role
+  // Determine dashboard link based on highest role
   let dashboardUrl = "/student";
-  if (session.user.role === "ADMIN") dashboardUrl = "/admin";
-  if (session.user.role === "FORM_MASTER") dashboardUrl = "/form-master";
+  const userRoles = session.user.roles || [];
+  if (userRoles.includes("ADMIN")) dashboardUrl = "/admin";
+  else if (userRoles.includes("FORM_MASTER")) dashboardUrl = "/form-master";
+  else if (userRoles.includes("SUBJECT_TEACHER")) dashboardUrl = "/subject-teacher";
+  else if (userRoles.includes("PARENT")) dashboardUrl = "/parent";
+
+  const mainRole = userRoles[0] || "STUDENT";
 
   return (
     <div className="flex items-center gap-4">
       <div className="hidden md:flex flex-col items-end">
         <span className="text-sm font-medium leading-none">{session.user.name}</span>
-        <span className="text-xs text-muted-foreground mt-1">{session.user.role?.replace("_", " ")}</span>
+        <span className="text-xs text-muted-foreground mt-1">{mainRole.replace("_", " ")}</span>
       </div>
       
       <div className="flex items-center gap-2">

@@ -35,7 +35,7 @@ export default {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role, // Assuming role is returned
+            roles: user.roles, // Assuming roles array is returned
           };
         }
 
@@ -50,14 +50,14 @@ export default {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role; // Extract from DB user
+        token.roles = (user as any).roles; // Extract from DB user
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.roles = token.roles as string[];
       }
       return session;
     },

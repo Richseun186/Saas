@@ -15,7 +15,7 @@ async function main() {
       name: "Super Admin",
       email: "admin@gradesync.edu",
       password: hashedPassword,
-      role: "ADMIN",
+      roles: ["ADMIN"],
     },
   });
 

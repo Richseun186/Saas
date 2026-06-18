@@ -30,7 +30,7 @@ export async function setupDemoEnvironment() {
     let classJss1 = await db.class.findFirst({ where: { name: "JSS 1A" } });
     if (!classJss1) {
       // Find a Form Master to assign, or create one
-      let formMaster = await db.user.findFirst({ where: { role: "FORM_MASTER" } });
+      let formMaster = await db.user.findFirst({ where: { roles: { has: "FORM_MASTER" } } });
       if (!formMaster) {
         const hashed = await bcryptjs.hash("teacher123", 10);
         formMaster = await db.user.create({
@@ -38,7 +38,7 @@ export async function setupDemoEnvironment() {
             name: "Mr. Ojo (Teacher)",
             email: "teacher@gradesync.edu",
             password: hashed,
-            role: "FORM_MASTER",
+            roles: ["FORM_MASTER"],
             schoolId: school.id,
           },
         });
@@ -70,7 +70,7 @@ export async function setupDemoEnvironment() {
             name: s.name,
             email: s.email,
             password: hashed,
-            role: "STUDENT",
+            roles: ["STUDENT"],
             schoolId: school.id,
           },
         });
@@ -107,6 +107,33 @@ export async function setupDemoEnvironment() {
       }
     }
 
+    // 6. Seed a Demo Parent linked to Chinedu
+    let parent = await db.user.findUnique({ where: { email: "parent@gradesync.edu" } });
+    if (!parent) {
+      const hashed = await bcryptjs.hash("parent123", 10);
+      parent = await db.user.create({
+        data: {
+          name: "Mr. Eze (Parent)",
+          email: "parent@gradesync.edu",
+          password: hashed,
+          roles: ["PARENT"],
+          schoolId: school.id,
+        },
+      });
+
+      // Link to Chinedu
+      const chinedu = await db.user.findUnique({ where: { email: "chinedu@student.edu" } });
+      if (chinedu) {
+        await db.parentStudentLink.create({
+          data: {
+            parentId: parent.id,
+            studentId: chinedu.id,
+            relationshipType: "Father",
+          },
+        });
+      }
+    }
+
     revalidatePath("/admin");
     return { success: true, message: "Demo environment setup successfully!" };
 
@@ -120,7 +147,7 @@ export async function getAdminDashboardData() {
   const school = await db.school.findFirst();
   const term = await db.sessionTerm.findFirst();
   const classes = await db.class.count();
-  const students = await db.user.count({ where: { role: "STUDENT" } });
+  const students = await db.user.count({ where: { roles: { has: "STUDENT" } } });
   
   return {
     school,

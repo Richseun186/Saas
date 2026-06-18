@@ -18,7 +18,9 @@ datasource db {
 enum Role {
   ADMIN
   FORM_MASTER
+  SUBJECT_TEACHER
   STUDENT
+  PARENT
 }
 
 model User {
@@ -28,17 +30,21 @@ model User {
   password      String?   // For credentials login
   emailVerified DateTime?
   image         String?
-  role          Role      @default(STUDENT)
+  roles         Role[]    @default([STUDENT])
   schoolId      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relationships
-  school      School?      @relation(fields: [schoolId], references: [id])
-  enrollments Enrollment[] // If user is a student
-  classes     Class[]      // If user is a form master
-  accounts    Account[]
-  sessions    Session[]
+  school               School?               @relation(fields: [schoolId], references: [id])
+  enrollments          Enrollment[]          // If user is a student
+  classes              Class[]               // If user is a form master
+  subjectAllocations   SubjectAllocation[]   // If user is a subject teacher
+  accounts             Account[]
+  sessions             Session[]
+  parentLinks          ParentStudentLink[]   @relation("ParentToLink")
+  childLinks           ParentStudentLink[]   @relation("StudentToLink")
+  cbtExams             CbtExam[]             // If user is a teacher
 }
 
 model Account {
@@ -81,17 +87,21 @@ model VerificationToken {
 // -----------------------------------------------------------------------------
 
 model School {
-  id        String   @id @default(uuid())
-  name      String
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  logo        String?  // URL to the school's logo
+  motto       String?  // e.g., "Knowledge is Power"
+  themeColor  String?  // e.g., "#008080" for branding
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relationships
   users          User[]
   classes        Class[]
   sessionsTerms  SessionTerm[]
   schoolSubjects SchoolSubject[]
+  feeCategories  FeeCategory[]
 }
 
 model SessionTerm {
@@ -103,8 +113,10 @@ model SessionTerm {
   isActive  Boolean  @default(false)
 
   // Relationships
-  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  enrollments Enrollment[]
+  school               School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  enrollments          Enrollment[]
+  subjectAllocations   SubjectAllocation[]
+  cbtExams             CbtExam[]
 }
 
 model Class {
@@ -114,9 +126,11 @@ model Class {
   formMasterId String?  // Optional relation to User (Form Master)
 
   // Relationships
-  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  formMaster   User?        @relation(fields: [formMasterId], references: [id])
-  enrollments  Enrollment[]
+  school               School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  formMaster           User?                @relation(fields: [formMasterId], references: [id])
+  enrollments          Enrollment[]
+  subjectAllocations   SubjectAllocation[]
+  cbtExams             CbtExam[]
 }
 
 // -----------------------------------------------------------------------------
@@ -140,9 +154,11 @@ model SchoolSubject {
   customName    String?  // Allows a school to override the standard name if necessary
 
   // Relationships
-  school      School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subjectBank SubjectBank   @relation(fields: [subjectBankId], references: [id])
-  results     Result[]
+  school               School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectBank          SubjectBank           @relation(fields: [subjectBankId], references: [id])
+  results              Result[]
+  subjectAllocations   SubjectAllocation[]
+  cbtExams             CbtExam[]
 
   @@unique([schoolId, subjectBankId]) // A school can only map a subject from the bank once
 }
@@ -162,10 +178,15 @@ model Enrollment {
   principalRemark  String? @db.Text
 
   // Relationships
-  student     User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  class       Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
-  sessionTerm SessionTerm @relation(fields: [sessionTermId], references: [id], onDelete: Cascade)
-  results     Result[]
+  student           User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class             Class              @relation(fields: [classId], references: [id], onDelete: Cascade)
+  sessionTerm       SessionTerm        @relation(fields: [sessionTermId], references: [id], onDelete: Cascade)
+  results           Result[]
+  affectiveDomain   AffectiveDomain?
+  psychomotorDomain PsychomotorDomain?
+  attendanceRecords AttendanceRecord[]
+  invoices          Invoice[]
+  cbtAttempts       CbtAttempt[]
 
   @@unique([studentId, sessionTermId]) // A student is enrolled once per term
 }
@@ -190,4 +211,207 @@ model Result {
   schoolSubject SchoolSubject @relation(fields: [schoolSubjectId], references: [id], onDelete: Cascade)
 
   @@unique([enrollmentId, schoolSubjectId]) // One result per subject per student per term
+}
+
+// -----------------------------------------------------------------------------
+// SUBJECT ALLOCATION
+// -----------------------------------------------------------------------------
+
+model SubjectAllocation {
+  id              String   @id @default(uuid())
+  teacherId       String
+  classId         String
+  schoolSubjectId String
+  sessionTermId   String
+  createdAt       DateTime @default(now())
+
+  // Relationships
+  teacher       User          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class         Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  schoolSubject SchoolSubject @relation(fields: [schoolSubjectId], references: [id], onDelete: Cascade)
+  sessionTerm   SessionTerm   @relation(fields: [sessionTermId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, schoolSubjectId, sessionTermId]) // One teacher per subject per class per term
+}
+
+// -----------------------------------------------------------------------------
+// AFFECTIVE & PSYCHOMOTOR DOMAINS
+// -----------------------------------------------------------------------------
+
+model AffectiveDomain {
+  id           String     @id @default(uuid())
+  enrollmentId String     @unique // One record per student per term
+  // Scored 1-5 (1=Very Poor, 5=Excellent)
+  punctuality       Int @default(3)
+  neatness          Int @default(3)
+  politeness        Int @default(3)
+  honesty           Int @default(3)
+  attentiveness     Int @default(3)
+  perseverance      Int @default(3)
+  cooperation       Int @default(3)
+  leadership        Int @default(3)
+
+  // Relationships
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+}
+
+model PsychomotorDomain {
+  id           String     @id @default(uuid())
+  enrollmentId String     @unique // One record per student per term
+  // Scored 1-5 (1=Very Poor, 5=Excellent)
+  handwriting       Int @default(3)
+  sports            Int @default(3)
+  drawing           Int @default(3)
+  verbal_fluency    Int @default(3)
+  musical_skill     Int @default(3)
+  computer_skill    Int @default(3)
+
+  // Relationships
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------------------------------------------
+// ATTENDANCE
+// -----------------------------------------------------------------------------
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+model AttendanceRecord {
+  id           String           @id @default(uuid())
+  enrollmentId String
+  date         DateTime         @db.Date
+  status       AttendanceStatus @default(PRESENT)
+  note         String?
+
+  // Relationships
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, date]) // One record per student per day
+}
+
+// -----------------------------------------------------------------------------
+// PARENT-STUDENT LINK
+// -----------------------------------------------------------------------------
+
+model ParentStudentLink {
+  id               String   @id @default(uuid())
+  parentId         String
+  studentId        String
+  relationshipType String?  // e.g., "Mother", "Father", "Guardian"
+  createdAt        DateTime @default(now())
+
+  parent  User @relation("ParentToLink", fields: [parentId], references: [id], onDelete: Cascade)
+  student User @relation("StudentToLink", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId]) // A parent is linked to a specific student only once
+}
+
+// -----------------------------------------------------------------------------
+// FEES & PAYMENTS
+// -----------------------------------------------------------------------------
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+model FeeCategory {
+  id          String   @id @default(uuid())
+  schoolId    String
+  name        String   // e.g., "First Term Tuition", "PTA Levy"
+  amount      Float
+  description String?
+  createdAt   DateTime @default(now())
+
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  enrollmentId   String
+  feeCategoryId  String
+  amountDue      Float
+  status         InvoiceStatus @default(PENDING)
+  dueDate        DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  enrollment  Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  feeCategory FeeCategory   @relation(fields: [feeCategoryId], references: [id], onDelete: Cascade)
+  payments    PaymentRecord[]
+}
+
+model PaymentRecord {
+  id             String   @id @default(uuid())
+  invoiceId      String
+  amountPaid     Float
+  paymentDate    DateTime @default(now())
+  method         String   // e.g., "Cash", "Transfer", "Simulated"
+  referenceNumber String?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------------------------------------------
+// COMPUTER BASED TEST (CBT)
+// -----------------------------------------------------------------------------
+
+model CbtExam {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  durationMinutes Int       @default(30)
+  startTime       DateTime?
+  endTime         DateTime?
+  totalMarks      Float     @default(100)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  classId         String
+  schoolSubjectId String
+  sessionTermId   String
+  teacherId       String
+
+  class         Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  schoolSubject SchoolSubject @relation(fields: [schoolSubjectId], references: [id], onDelete: Cascade)
+  sessionTerm   SessionTerm   @relation(fields: [sessionTermId], references: [id], onDelete: Cascade)
+  teacher       User          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  questions CbtQuestion[]
+  attempts  CbtAttempt[]
+}
+
+model CbtQuestion {
+  id            String  @id @default(uuid())
+  examId        String
+  questionText  String  @db.Text
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctOption String  // "A", "B", "C", "D"
+  marks         Float   @default(1)
+
+  exam CbtExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+model CbtAttempt {
+  id            String    @id @default(uuid())
+  examId        String
+  enrollmentId  String
+  startTime     DateTime  @default(now())
+  endTime       DateTime?
+  score         Float?
+  status        String    @default("ONGOING") // ONGOING, SUBMITTED
+
+  exam       CbtExam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([examId, enrollmentId]) // A student can only have one attempt per exam
 }
