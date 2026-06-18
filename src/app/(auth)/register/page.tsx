@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useTransition, Suspense } from "react";
+import { useState, useTransition, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { GraduationCap, ArrowLeft, ArrowRight, CreditCard, CheckCircle2, Lock, Loader2, Eye, EyeOff, Wifi } from "lucide-react";
+import { GraduationCap, ArrowLeft, ArrowRight, CheckCircle2, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { registerSchool } from "@/actions/onboarding";
+import dynamic from "next/dynamic";
+
+const PaystackButton = dynamic(() => import("@/components/shared/PaystackButton"), { ssr: false });
 
 const PLANS: Record<string, { name: string; price: string; amount: number }> = {
   basic:    { name: "Basic Plan",    price: "₦25,000/term", amount: 25000 },
@@ -14,7 +17,6 @@ const PLANS: Record<string, { name: string; price: string; amount: number }> = {
 
 type Step = "school" | "admin" | "payment" | "success";
 
-// Inner component that actually uses useSearchParams
 function RegisterInner() {
   const searchParams = useSearchParams();
   const planKey = searchParams.get("plan") ?? "standard";
@@ -32,14 +34,6 @@ function RegisterInner() {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
 
-  // Payment state
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCVV, setCardCVV] = useState("");
-  const [cardName, setCardName] = useState("");
-  const [paymentPhase, setPaymentPhase] = useState<"form" | "processing" | "otp">("form");
-  const [otpInputs, setOtpInputs] = useState(["", "", "", "", "", ""]);
-
   const steps: { key: Step; label: string }[] = [
     { key: "school",  label: "School Info" },
     { key: "admin",   label: "Admin Account" },
@@ -47,47 +41,37 @@ function RegisterInner() {
   ];
   const stepIndex = steps.findIndex(s => s.key === step);
 
-  const handleCardNumber = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 16);
-    setCardNumber(digits.replace(/(\d{4})(?=\d)/g, "$1 "));
-  };
-  const handleExpiry = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 4);
-    if (digits.length > 2) setCardExpiry(digits.slice(0, 2) + "/" + digits.slice(2));
-    else setCardExpiry(digits);
-  };
-  const handleOtpInput = (index: number, val: string) => {
-    if (val.length > 1) return;
-    const updated = [...otpInputs];
-    updated[index] = val;
-    setOtpInputs(updated);
-    if (val && index < 5) document.getElementById(`otp-${index + 1}`)?.focus();
-  };
-
   const handleSchoolNext = () => {
     if (!schoolName.trim() || !address.trim()) { setError("Please fill in all fields."); return; }
     setError(""); setStep("admin");
   };
+  
   const handleAdminNext = () => {
     if (!adminName.trim() || !adminEmail.trim() || !adminPassword.trim()) { setError("Please fill in all fields."); return; }
     if (adminPassword.length < 8) { setError("Password must be at least 8 characters."); return; }
     setError(""); setStep("payment");
   };
-  const handlePayNow = () => {
-    if (!cardNumber || !cardExpiry || !cardCVV || !cardName) { setError("Please complete all card details."); return; }
-    setError("");
-    setPaymentPhase("processing");
-    setTimeout(() => setPaymentPhase("otp"), 2500);
-  };
-  const handleOtpSubmit = () => {
-    const otpFull = otpInputs.join("");
-    if (otpFull.length < 6) { setError("Please enter the 6-digit OTP."); return; }
+
+  const onSuccess = (reference: any) => {
+    // Paystack payment was successful
     setError("");
     startTransition(async () => {
-      const result = await registerSchool({ schoolName, address, adminName, adminEmail, adminPassword, plan: planKey });
+      const result = await registerSchool({ 
+        schoolName, 
+        address, 
+        adminName, 
+        adminEmail, 
+        adminPassword, 
+        plan: planKey,
+        reference: reference.reference || "mock_reference"
+      });
       if (result.success) setStep("success");
-      else { setError(result.error || "Registration failed. Please try again."); setPaymentPhase("form"); }
+      else { setError(result.error || "Registration failed. Please contact support."); }
     });
+  };
+
+  const onClose = () => {
+    setError("Payment window closed. Please complete payment to register your school.");
   };
 
   return (
@@ -191,107 +175,49 @@ function RegisterInner() {
 
           {/* ── STEP 3: Payment ── */}
           {step === "payment" && (
-            <div className="animate-fade-in">
-              <button onClick={() => { setStep("admin"); setPaymentPhase("form"); }} className="flex items-center gap-2 text-slate-400 hover:text-white transition text-sm mb-6">
+            <div className="animate-fade-in space-y-6">
+              <button onClick={() => setStep("admin")} className="flex items-center gap-2 text-slate-400 hover:text-white transition text-sm mb-2">
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
-
-              {paymentPhase === "form" && (
-                <div className="space-y-6">
-                  {/* Paystack-style header bar */}
-                  <div className="p-5 rounded-2xl bg-[#011B33] border border-[#023E63]">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center">
-                          <GraduationCap className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-white font-bold text-sm">GradeSync Nigeria</p>
-                          <p className="text-slate-400 text-xs">{adminEmail}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-bold text-xl">₦{plan.amount.toLocaleString()}</p>
-                        <p className="text-slate-400 text-xs">{plan.name}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {["CARD", "BANK", "USSD"].map((tab, i) => (
-                        <button key={tab} className={`px-3 py-1.5 rounded text-xs font-semibold transition ${i === 0 ? "bg-teal-500 text-white" : "text-slate-400 hover:text-white"}`}>{tab}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {error && <div className="px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">{error}</div>}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Card Number</label>
-                      <div className="relative">
-                        <input value={cardNumber} onChange={e => handleCardNumber(e.target.value)} placeholder="0000 0000 0000 0000" maxLength={19} className="w-full px-4 py-3 pr-12 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono tracking-wider transition" />
-                        <CreditCard className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Name on Card</label>
-                      <input value={cardName} onChange={e => setCardName(e.target.value)} placeholder="e.g. ADESOLA BELLO" className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 uppercase transition" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Expiry Date</label>
-                        <input value={cardExpiry} onChange={e => handleExpiry(e.target.value)} placeholder="MM/YY" maxLength={5} className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono transition" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">CVV</label>
-                        <input value={cardCVV} onChange={e => setCardCVV(e.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="•••" maxLength={3} className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono transition" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <button onClick={handlePayNow} className="w-full py-4 rounded-xl bg-teal-500 text-white font-bold text-lg hover:bg-teal-400 transition flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20">
-                    <Lock className="w-4 h-4" /> Pay ₦{plan.amount.toLocaleString()}
-                  </button>
-                  <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
-                    <Lock className="w-3 h-3" /> Secured by <span className="text-teal-400 font-semibold">Paystack</span>
-                  </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-7 h-7 text-teal-400" />
                 </div>
-              )}
+                <h2 className="text-xl font-bold text-white mb-2">Secure Payment</h2>
+                <p className="text-slate-400 text-sm">You are about to pay for the <strong>{plan.name}</strong>.</p>
+              </div>
 
-              {paymentPhase === "processing" && (
-                <div className="flex flex-col items-center justify-center py-24 gap-6 text-center">
-                  <div className="relative w-20 h-20">
-                    <div className="absolute inset-0 rounded-full border-4 border-teal-500/20" />
-                    <div className="absolute inset-0 rounded-full border-4 border-t-teal-500 animate-spin" />
-                    <Wifi className="absolute inset-0 m-auto w-8 h-8 text-teal-400" />
-                  </div>
-                  <div>
-                    <p className="text-white font-bold text-lg">Processing Payment</p>
-                    <p className="text-slate-400 text-sm mt-1">Please wait. Do not close this tab.</p>
-                  </div>
-                  <p className="text-xs text-slate-500">Connecting to your bank...</p>
-                </div>
-              )}
+              {error && <div className="px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">{error}</div>}
 
-              {paymentPhase === "otp" && (
-                <div className="space-y-6 animate-fade-in">
-                  <div className="text-center">
-                    <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center mx-auto mb-4">
-                      <Lock className="w-7 h-7 text-teal-400" />
-                    </div>
-                    <h2 className="text-xl font-bold text-white mb-2">OTP Verification</h2>
-                    <p className="text-slate-400 text-sm">We sent a one-time password to the phone number linked to your card. Enter any 6 digits to confirm.</p>
-                  </div>
-                  {error && <div className="px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">{error}</div>}
-                  <div className="flex gap-3 justify-center">
-                    {otpInputs.map((val, i) => (
-                      <input key={i} id={`otp-${i}`} value={val} onChange={e => handleOtpInput(i, e.target.value)} maxLength={1} className="w-12 h-14 text-center text-xl font-bold rounded-xl bg-white/[0.04] border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 transition" />
-                    ))}
-                  </div>
-                  <button onClick={handleOtpSubmit} disabled={isPending} className="w-full py-4 rounded-xl bg-teal-500 text-white font-bold text-lg hover:bg-teal-400 transition flex items-center justify-center gap-2 disabled:opacity-60">
-                    {isPending ? <><Loader2 className="w-5 h-5 animate-spin" /> Activating Account...</> : "Verify & Activate School"}
-                  </button>
-                  <p className="text-center text-xs text-slate-500">Didn&apos;t receive OTP? <button className="text-teal-400 hover:underline">Resend OTP</button></p>
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-400">School Name</span>
+                  <span className="text-white font-medium">{schoolName}</span>
                 </div>
-              )}
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-400">Plan</span>
+                  <span className="text-white font-medium">{plan.name}</span>
+                </div>
+                <div className="h-px w-full bg-white/10" />
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span className="text-white">Total</span>
+                  <span className="text-teal-400">₦{plan.amount.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <PaystackButton
+                email={adminEmail}
+                amount={plan.amount}
+                planKey={planKey}
+                isPending={isPending}
+                onSuccess={onSuccess}
+                onClose={onClose}
+              />
+              
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+                <Lock className="w-3 h-3" /> Secured by <span className="text-teal-400 font-semibold">Paystack</span>
+              </div>
             </div>
           )}
 
@@ -308,7 +234,7 @@ function RegisterInner() {
               </div>
               <div className="w-full p-5 rounded-2xl bg-white/[0.03] border border-white/5 text-left space-y-3">
                 <p className="text-white font-semibold text-sm mb-1">Your Next Steps:</p>
-                {["Create classes and add subject teachers", "Enrol your students", "Allocate subjects per class", "Start recording scores and running CBT exams"].map((s, i) => (
+                {["Check your email for the welcome guide", "Create classes and add subject teachers", "Enrol your students", "Start recording scores and running CBT exams"].map((s, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
                     <span className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</span>
                     {s}

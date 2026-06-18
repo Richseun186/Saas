@@ -102,6 +102,21 @@ model School {
   sessionsTerms  SessionTerm[]
   schoolSubjects SchoolSubject[]
   feeCategories  FeeCategory[]
+  subscriptions  Subscription[]
+}
+
+model Subscription {
+  id             String   @id @default(uuid())
+  schoolId       String
+  plan           String   // e.g., "basic", "standard", "premium"
+  amount         Float    // amount paid
+  reference      String   @unique // Paystack transaction reference
+  status         String   // e.g., "active", "expired", "cancelled"
+  startDate      DateTime @default(now())
+  endDate        DateTime // Date when subscription expires
+  
+  // Relationships
+  school         School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 }
 
 model SessionTerm {
